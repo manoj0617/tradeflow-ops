@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "f321447f-2bcb-4d53-9150-tradeflow-ops",
+    "name": "TradeFlow Ops API",
+    "description": "Core authentication, CRM, inventory, and sales challan workflow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login as admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login succeeds', () => pm.response.to.have.status(200));",
+                "pm.environment.set('token', pm.response.json().data.token);"
+              ]
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@tradeflow.local\",\n  \"password\": \"TradeFlow@123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Current user",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List customers",
+          "request": { "method": "GET", "url": "{{baseUrl}}/customers?page=1&limit=20&search=" }
+        },
+        {
+          "name": "Create customer",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.environment.set('customerId', pm.response.json().data.id);"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo Buyer\",\n  \"mobile\": \"9876543200\",\n  \"email\": \"buyer@example.com\",\n  \"businessName\": \"Demo Wholesale Mart\",\n  \"gstNumber\": \"\",\n  \"type\": \"WHOLESALE\",\n  \"address\": \"12 Market Road, Bengaluru\",\n  \"status\": \"ACTIVE\",\n  \"followUpDate\": \"\",\n  \"notes\": \"Created from Postman.\"\n}"
+            },
+            "url": "{{baseUrl}}/customers"
+          }
+        },
+        {
+          "name": "Add follow-up",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Shared the updated wholesale price list.\",\n  \"followUpDate\": \"\"\n}" },
+            "url": "{{baseUrl}}/customers/{{customerId}}/follow-ups"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "List warehouses",
+          "request": { "method": "GET", "url": "{{baseUrl}}/warehouses" }
+        },
+        {
+          "name": "List products",
+          "request": { "method": "GET", "url": "{{baseUrl}}/products?page=1&limit=20" }
+        },
+        {
+          "name": "Record stock IN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"IN\",\n  \"quantity\": 5,\n  \"reason\": \"Supplier receipt\"\n}" },
+            "url": "{{baseUrl}}/products/{{productId}}/stock-adjustments"
+          }
+        },
+        {
+          "name": "Stock movement ledger",
+          "request": { "method": "GET", "url": "{{baseUrl}}/stock-movements?page=1&limit=20" }
+        }
+      ]
+    },
+    {
+      "name": "Sales challans",
+      "item": [
+        {
+          "name": "Create draft",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.environment.set('challanId', pm.response.json().data.id);"] }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"status\": \"DRAFT\",\n  \"items\": [{ \"productId\": \"{{productId}}\", \"quantity\": 2 }]\n}"
+            },
+            "url": "{{baseUrl}}/challans"
+          }
+        },
+        {
+          "name": "Confirm challan",
+          "request": { "method": "POST", "url": "{{baseUrl}}/challans/{{challanId}}/confirm" }
+        },
+        {
+          "name": "Cancel challan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}" },
+            "url": "{{baseUrl}}/challans/{{challanId}}/cancel"
+          }
+        }
+      ]
+    }
+  ]
+}
+

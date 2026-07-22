@@ -1,0 +1,73 @@
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --tf-canvas: oklch(1 0 0);
+  --tf-quiet: oklch(0.975 0.006 160);
+  --tf-ink: oklch(0.22 0.025 160);
+  --tf-muted: oklch(0.45 0.025 160);
+  --tf-border: oklch(0.89 0.012 160);
+  --tf-primary: oklch(0.52 0.13 160);
+  --tf-primary-strong: oklch(0.42 0.12 160);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--tf-quiet);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  color: var(--tf-ink);
+  background: var(--tf-quiet);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid oklch(0.68 0.13 250);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  inset: 8px auto auto 8px;
+  z-index: 1600;
+  transform: translateY(-150%);
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: oklch(1 0 0);
+  background: var(--tf-primary-strong);
+  transition: transform 180ms ease-out;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
