@@ -114,21 +114,22 @@ The API enforces roles even when the frontend hides an action.
 
 ## Deployment
 
-The recommended free deployment order is **Neon -> Render -> Vercel**:
+The recommended deployment is **Neon -> Vercel Services**:
 
 1. Provision PostgreSQL on Neon.
-2. Deploy the API to Render using the root `render.yaml` blueprint.
-3. Deploy `frontend/` to Vercel and set `VITE_API_BASE_URL` to the Render URL plus `/api`.
-4. Update Render's `CORS_ORIGIN` to the exact Vercel production origin.
-5. Update the Postman production environment and run the smoke-test flow.
+2. Import the repository into Vercel with the **Services** preset and root directory `./`.
+3. Add the backend secrets to Vercel, then deploy the Vite and Express services together.
+4. Update the Postman production environment and run the smoke-test flow.
+
+The root `vercel.json` routes `/api/*` to Express and all other paths to Vite on one origin. The frontend therefore uses `/api` in production without a public cross-origin API variable. `render.yaml` remains available as a fallback if Vercel Services is unavailable for an account.
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for exact provider settings, environment variables, migration and seed behavior, verification steps, and the final submission checklist.
 
 ### Live endpoints
 
 - Frontend: _add the Vercel production URL after deployment_
-- Backend API: _add the Render service URL plus `/api` after deployment_
-- Health check: _add the Render service URL plus `/api/health` after deployment_
+- Backend API: _add the same Vercel URL plus `/api` after deployment_
+- Health check: _add the same Vercel URL plus `/api/health` after deployment_
 
 ## Assumptions and known limitations
 

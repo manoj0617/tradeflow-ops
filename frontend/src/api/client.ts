@@ -4,7 +4,8 @@ import type { ApiErrorPayload } from '../types';
 export const TOKEN_KEY = 'tradeflow_access_token';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL
+    ?? (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api'),
   timeout: 15_000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -30,4 +31,3 @@ export const getApiError = (error: unknown, fallback = 'Something went wrong. Pl
   if (axios.isAxiosError<ApiErrorPayload>(error)) return error.response?.data.error?.message ?? fallback;
   return error instanceof Error ? error.message : fallback;
 };
-

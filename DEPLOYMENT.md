@@ -1,91 +1,74 @@
 # TradeFlow Ops deployment runbook
 
-This runbook deploys the case-study environment without paid infrastructure.
+This runbook deploys the case-study environment on Neon PostgreSQL and Vercel Services without paid infrastructure.
 
 ## Deployment order
 
-Use this order because each layer needs the URL produced by the layer below it:
-
 1. Neon PostgreSQL
-2. Render API
-3. Vercel frontend
-4. Final Render CORS update
+2. Vercel Services project
+3. Production smoke test
+
+Neon must come first because the backend service applies Prisma migrations and runs the idempotent seed during its Vercel build.
 
 ## 1. Neon PostgreSQL
 
-1. Create a Neon project in a region close to the Render service.
+1. Create a Neon project in a region close to the Vercel function region.
 2. Create the `tradeflow` database if the project did not create it automatically.
-3. Copy the direct PostgreSQL connection string. Keep it private.
-4. Do not commit this value to Git or store it in a frontend environment variable.
+3. Copy the PostgreSQL connection string. Keep it private.
+4. You may place it in `backend/.env` for local development. That file is Git-ignored.
+5. Never put the database URL in a `VITE_` variable because Vite exposes those values to browsers.
 
-The Render build runs committed Prisma migrations and the idempotent seed. The seed creates the demo warehouse, products, customer, follow-up, and all four role accounts.
+## 2. Vercel Services
 
-## 2. Render API
-
-1. In Render, create a new Blueprint connected to this repository.
-2. Select the root `render.yaml` file.
-3. Provide the prompted secret values:
-
-| Variable | Value |
-|---|---|
-| `DATABASE_URL` | Neon direct PostgreSQL connection string |
-| `JWT_SECRET` | Render-generated value from the blueprint |
-| `SEED_PASSWORD` | A strong password shared by the four demo accounts |
-| `CORS_ORIGIN` | `http://localhost:5180` temporarily; replace after Vercel deploys |
-
-The blueprint configures Node 22, installs from the lockfile, generates Prisma Client, builds the API, applies migrations, runs the idempotent seed, starts the compiled server, and checks `/api/health`.
-
-Save the resulting URL, for example:
-
-```text
-https://tradeflow-ops-api.onrender.com
-```
-
-Verify:
-
-```text
-https://tradeflow-ops-api.onrender.com/api/health
-```
-
-The free Render service may sleep after inactivity, so the first request can be slow.
-
-## 3. Vercel frontend
-
-Import the same GitHub repository with these project settings:
+Import the GitHub repository and use these project settings:
 
 | Setting | Value |
 |---|---|
-| Framework preset | Vite |
-| Root directory | `frontend` |
-| Install command | `npm ci --no-audit --no-fund` |
-| Build command | `npm run build` |
-| Output directory | `dist` |
+| Application preset | Services |
+| Root directory | `./` |
+| Production branch | `main` |
 
-Add this production environment variable before deploying:
+The root `vercel.json` defines two services:
+
+- `frontend`: Vite from `frontend/`
+- `backend`: Express from `backend/`, publicly routed at `/api`
+
+The backend build installs from the lockfile, generates Prisma Client, compiles TypeScript, applies committed migrations, and runs the idempotent seed.
+
+### Vercel environment variables
+
+Add these in Project Settings -> Environment Variables before the first production deployment:
+
+| Variable | Environments | Value |
+|---|---|---|
+| `DATABASE_URL` | Production and Preview | Neon PostgreSQL connection string |
+| `JWT_SECRET` | Production and Preview | Random secret of at least 32 characters |
+| `JWT_EXPIRES_IN` | Production and Preview | `2h` |
+| `NODE_ENV` | Production and Preview | `production` |
+| `SEED_PASSWORD` | Production and Preview | Strong password for all four demo users |
+| `CORS_ORIGIN` | Production | Exact Vercel production origin after it is assigned |
+
+`VITE_API_BASE_URL` is not required on Vercel. Production frontend requests use the same-origin `/api` path. For local development, the frontend continues to default to `http://localhost:4000/api`.
+
+For the initial deployment, `CORS_ORIGIN` may be set to the expected production origin, such as:
 
 ```text
-VITE_API_BASE_URL=https://tradeflow-ops-api.onrender.com/api
+https://tradeflow-ops.vercel.app
 ```
 
-`frontend/vercel.json` rewrites application routes to `index.html`, so direct visits to `/customers`, `/products`, and `/challans` work.
+If Vercel assigns a different production domain, update the variable and redeploy. Preview requests remain same-origin through the Services router.
 
-## 4. Final CORS update
+## 3. Verify production
 
-In Render, replace the temporary `CORS_ORIGIN` with the exact Vercel production origin, without a trailing slash:
+Use the single Vercel production domain for both surfaces:
 
 ```text
-CORS_ORIGIN=https://your-tradeflow-project.vercel.app
+Frontend: https://your-project.vercel.app
+API:      https://your-project.vercel.app/api
+Health:   https://your-project.vercel.app/api/health
 ```
 
-For both production and local access, use a comma-separated list:
-
-```text
-CORS_ORIGIN=https://your-tradeflow-project.vercel.app,http://localhost:5180
-```
-
-Redeploy or restart the Render service after changing the variable.
-
-## Production smoke test
+Run this smoke test:
 
 1. Open the Vercel URL in a private browser window.
 2. Sign in as Admin.
@@ -94,7 +77,7 @@ Redeploy or restart the Render service after changing the variable.
 5. Create and confirm a challan; confirm that stock decreases and an OUT movement exists.
 6. Cancel the challan; confirm that stock is restored through an IN movement.
 7. Sign in once with each non-admin account and verify actions match its role.
-8. Run the Postman collection with its `baseUrl` set to the Render URL plus `/api`.
+8. Run the Postman collection with `baseUrl` set to the Vercel URL plus `/api`.
 
 ## Demo accounts
 
@@ -107,17 +90,21 @@ The seed creates these accounts. All use the deployed `SEED_PASSWORD`.
 | Warehouse | `warehouse@tradeflow.local` |
 | Accounts | `accounts@tradeflow.local` |
 
+## Render fallback
+
+If Vercel Services is unavailable or fails because the feature is still in beta, deploy the backend using the committed `render.yaml`, keep the frontend on Vercel, and set `VITE_API_BASE_URL` to the Render URL plus `/api`.
+
 ## Submission update
 
-Before submitting, add the following to `README.md` and the submission message:
+Before submitting, add these items to `README.md` and the submission message:
 
 1. GitHub repository URL
 2. Vercel frontend URL
-3. Render backend API URL
+3. Vercel backend API URL (`/api` on the same domain)
 4. Credentials for all four roles
 5. Postman collection path
 6. Architecture summary
 7. Known limitations
-8. A short screen-recording URL as a fallback for free-tier cold starts
+8. A short screen-recording URL
 
-Never commit Neon credentials, JWT secrets, deployed passwords, or provider tokens.
+Never commit Neon credentials, JWT secrets, deployed passwords, `.env` files, or provider tokens.

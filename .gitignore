@@ -8,4 +8,4 @@ coverage/
 .DS_Store
 backend/prisma/dev.db
 frontend/.vite/
-
+.vercel/
