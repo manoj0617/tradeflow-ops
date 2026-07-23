@@ -33,8 +33,9 @@ const nextChallanNumber = async (transaction: Transaction) => {
 const lockProducts = async (transaction: Transaction, productIds: string[]) => {
   const sortedIds = [...productIds].sort();
   if (sortedIds.length) {
+    const uuidParameters = sortedIds.map((id) => Prisma.sql`${id}::uuid`);
     await transaction.$queryRaw(
-      Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(sortedIds)}) ORDER BY id FOR UPDATE`,
+      Prisma.sql`SELECT id FROM "Product" WHERE id IN (${Prisma.join(uuidParameters)}) ORDER BY id FOR UPDATE`,
     );
   }
 };
@@ -221,4 +222,3 @@ export const challanService = {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   },
 };
-
