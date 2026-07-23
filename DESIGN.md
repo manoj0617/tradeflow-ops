@@ -1,10 +1,23 @@
-# TradeFlow Ops Design
+# TradeFlow Ops design system
 
-## Visual Theme
+## Experience direction
 
-Daylight operations desk: crisp white working surfaces, charcoal-green ink, and a controlled mineral green anchor that reads clearly in bright offices and warehouse environments. The strategy is restrained; color marks actions, selection, and business state rather than decorating the workspace.
+TradeFlow Ops uses a “daylight operations desk” visual language: crisp working surfaces, charcoal-green text, and a controlled mineral-green accent that remains legible in bright offices and warehouse environments.
 
-## Color Palette
+The interface is operational rather than promotional. Color identifies actions, selection, risk, and business state instead of decorating the workspace.
+
+## Design principles
+
+1. Put the operational decision before secondary information.
+2. Make stock consequences visible before confirmation.
+3. Preserve audit context: who changed what, when, why, and from which record.
+4. Keep controls consistent across CRM, inventory, and challans.
+5. Reveal complexity progressively while keeping primary workflows fast.
+6. Never rely on color alone to communicate status.
+
+## Visual tokens
+
+### Color palette
 
 - Canvas: `oklch(1 0 0)`
 - Quiet canvas: `oklch(0.975 0.006 160)`
@@ -14,49 +27,132 @@ Daylight operations desk: crisp white working surfaces, charcoal-green ink, and 
 - Border: `oklch(0.89 0.012 160)`
 - Primary: `oklch(0.52 0.13 160)`
 - Primary strong: `oklch(0.42 0.12 160)`
-- Information accent: `oklch(0.55 0.15 250)`
+- Information: `oklch(0.55 0.15 250)`
 - Warning: `oklch(0.68 0.14 75)`
 - Error: `oklch(0.55 0.18 25)`
 - Success: `oklch(0.48 0.12 155)`
 
-Saturated mid-luminance fills always use white text. Status color is paired with a text label and, where helpful, an icon.
+Saturated mid-luminance fills use white text. Status color is always paired with a label and, when helpful, an icon.
 
-## Typography
+### Typography
 
-Use Inter with a system-ui fallback for every interface role. The product uses a compact fixed type scale: 12px captions, 14px secondary UI, 16px body and controls, 18px section titles, 24px page headings, and 32px only for the login title. Use tabular figures for prices, quantities, dates, and document numbers.
+Inter with a `system-ui` fallback is used for every interface role:
 
-## Shape and Depth
+| Role | Size |
+|---|---:|
+| Caption and metadata | 12px |
+| Secondary interface text | 14px |
+| Body and controls | 16px |
+| Section title | 18px |
+| Page heading | 24px |
+| Login title | 32px |
+
+Prices, quantities, dates, and document numbers use tabular figures.
+
+### Shape and depth
 
 - Controls: 8px radius.
 - Panels and dialogs: 12px radius.
-- Status chips: full pill only because they are compact labels.
-- Prefer boundaries and surface changes over shadows.
-- Use one restrained 8px-blur shadow only for overlays and the mobile drawer.
-- Never nest decorative cards.
+- Status chips: pill shape because they are compact labels.
+- Prefer borders and surface changes over shadows.
+- Reserve one restrained shadow for overlays and the mobile drawer.
+- Avoid nested decorative cards.
 
 ## Layout
 
-- Desktop: persistent 248px navigation rail and a content area capped at 1440px.
-- Tablet/mobile: navigation becomes a drawer; page actions remain close to the heading.
-- Page gutters: 16px mobile, 24px tablet, 32px desktop.
-- Tables become horizontally scrollable within a labelled region; essential columns remain first.
-- Long forms use two columns on desktop and one column below 900px.
-- The main document owns scrolling; avoid nested page scroll containers.
+- Desktop uses a persistent 248px navigation rail.
+- Content width is capped at 1440px.
+- Tablet and mobile navigation becomes a drawer.
+- Gutters are 16px on mobile, 24px on tablet, and 32px on desktop.
+- Long forms use two columns on desktop and one below 900px.
+- Tables scroll horizontally inside a labelled region when necessary.
+- Essential columns remain first and row actions remain reachable.
+- The document owns page scrolling; avoid nested full-page scroll areas.
 
-## Components
+## Component behavior
 
-- Page headers contain one primary action at most.
-- Tables provide search, meaningful empty states, loading skeletons, and explicit pagination.
-- Forms use persistent labels, on-blur validation, inline recovery guidance, and loading buttons.
-- Destructive or stock-changing actions require a focused confirmation dialog.
-- Navigation uses one consistent outlined MUI icon family with text labels.
-- Dashboard information is arranged as an operational brief, not a uniform metric-card grid.
+### Navigation
+
+- Use a single outlined MUI icon family with visible text labels.
+- Show the active destination with shape, contrast, and text—not color alone.
+- Keep sign-out and current-user context clearly separated from navigation.
+
+### Page headers
+
+- Show a concise title and supporting context.
+- Present at most one primary action.
+- Keep filters and secondary actions close to the content they affect.
+
+### Tables and lists
+
+- Include search, meaningful filters, explicit pagination, and result counts.
+- Provide loading skeletons, errors with recovery actions, and useful empty states.
+- Use readable status labels and right-align numerical values.
+- Give icon-only actions accessible names.
+
+### Forms
+
+- Use persistent labels, on-blur validation, and inline recovery guidance.
+- Preserve user input after recoverable errors.
+- Disable duplicate submissions and show progress on the submitting action.
+- Use concrete domain language instead of technical field names.
+
+### Stock-changing actions
+
+- Display product, requested quantity, and stock consequences.
+- Require a focused confirmation for irreversible or compensating operations.
+- Return actionable errors that show requested and available stock.
+- Announce successful state changes and refresh dependent data.
+
+## Responsive behavior
+
+- Target a minimum supported width of 375px.
+- Keep primary actions near the page heading.
+- Convert dense tables to horizontal regions rather than shrinking text below readable sizes.
+- Maintain at least 44px touch targets for primary interactive controls.
+- Ensure dialogs fit the viewport and their actions remain visible.
+- Support browser zoom to 200% without loss of content or functionality.
+
+## Accessibility
+
+The target is WCAG 2.1 AA:
+
+- Semantic headings and landmarks.
+- Programmatically associated labels and validation messages.
+- Visible keyboard focus.
+- Complete keyboard access to navigation, tables, forms, dialogs, and menus.
+- Screen-reader announcements for asynchronous feedback.
+- Sufficient contrast for text and controls.
+- Text or icons in addition to color for statuses.
+- Reduced-motion support.
+- Meaningful empty, loading, unauthorized, not-found, and error states.
 
 ## Motion
 
-Use 150-220ms state transitions for drawers, dialogs, hover, and selection. Motion communicates state changes only. Do not orchestrate page-load animations. Respect `prefers-reduced-motion` by disabling nonessential transitions.
+- Use 150–220ms transitions for drawers, dialogs, hover, focus, and selection.
+- Animate opacity and transforms rather than layout dimensions.
+- Motion communicates state change only; do not orchestrate page-load animation.
+- Disable nonessential transitions under `prefers-reduced-motion`.
 
-## UX Copy
+## UX writing
 
-Use concrete operational language: “Confirm challan and deduct stock,” “Add stock movement,” and “Next follow-up.” Errors state the cause and recovery, including available and requested stock when a confirmation fails.
+Use direct operational language:
 
+- “Confirm challan and deduct stock”
+- “Add stock movement”
+- “Next follow-up”
+- “Cancel challan and restore stock”
+
+Errors state the cause and recovery. For example: “Cannot confirm this challan: 8 units were requested, but only 5 are available.”
+
+Avoid vague labels such as “Submit,” “Process,” or “Something went wrong” when a more precise action or recovery is known.
+
+## Anti-patterns
+
+- Interchangeable metric-card grids without an operational narrative.
+- Decorative glassmorphism, neon gradients, excessive radii, or animated chrome.
+- Consumer-shopping language that makes inventory work resemble e-commerce.
+- Dense legacy ERP layouts with tiny controls and unexplained abbreviations.
+- Hidden state transitions or silent stock changes.
+- Confirmation dialogs that do not explain consequences.
+- Status communication based only on red, amber, or green.

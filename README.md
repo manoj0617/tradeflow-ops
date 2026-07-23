@@ -1,26 +1,91 @@
 # TradeFlow Ops
 
-TradeFlow Ops is a compact ERP + CRM operations portal for wholesale and distribution teams. It connects customer follow-ups, product stock, an auditable movement ledger, and transactional sales challans with role-based access.
+[![CI](https://github.com/manoj0617/tradeflow-ops/actions/workflows/ci.yml/badge.svg)](https://github.com/manoj0617/tradeflow-ops/actions/workflows/ci.yml)
+
+TradeFlow Ops is a full-stack ERP and CRM case study for wholesale and distribution teams. It connects customer follow-ups, warehouse stock, an auditable movement ledger, and sales challans while enforcing role-based access and transactional inventory rules.
+
+## Live application
+
+| Resource | Link |
+|---|---|
+| Application | [tradeflow-ops.vercel.app](https://tradeflow-ops.vercel.app) |
+| API base | [tradeflow-ops.vercel.app/api](https://tradeflow-ops.vercel.app/api) |
+| Health check | [tradeflow-ops.vercel.app/api/health](https://tradeflow-ops.vercel.app/api/health) |
+| Source code | [github.com/manoj0617/tradeflow-ops](https://github.com/manoj0617/tradeflow-ops) |
+
+The application and API are deployed together with Vercel Services. PostgreSQL is hosted on Neon.
+
+## Case-study coverage
+
+- Customer profiles, statuses, search, follow-up dates, notes, and follow-up history.
+- Products, warehouses, minimum-stock thresholds, stock adjustments, and an immutable movement ledger.
+- Draft, confirmed, and cancelled sales challans with line-item snapshots.
+- Atomic challan confirmation: validate stock, deduct inventory, write ledger entries, and update status in one PostgreSQL transaction.
+- Compensating stock movements when a confirmed challan is cancelled.
+- Admin, Sales, Warehouse, and Accounts roles enforced by both the UI and API.
+- Responsive React interface with loading, empty, validation, permission, and error states.
+- Automated backend, integration, schema, and frontend tests in GitHub Actions.
 
 ## Architecture
 
 ```text
-React + MUI + TanStack Query
-           |
-       REST / JWT
-           |
-Express routes -> controllers -> services -> Prisma repositories
-           |
-       PostgreSQL
+Browser
+  |
+  | HTTPS, REST, Bearer JWT
+  v
+Vercel Services
+  |-- React + Vite + MUI + TanStack Query
+  `-- Express + TypeScript + Zod
+         |
+         | Prisma ORM
+         v
+      Neon PostgreSQL
 ```
 
-The service layer owns status transitions and transaction boundaries. Confirming a challan locks the relevant records, validates every line, decrements stock, writes movement records, and marks the challan confirmed in one PostgreSQL transaction.
+The backend follows a route → controller → service → repository flow. Controllers translate HTTP requests, services own business rules and transaction boundaries, and repositories isolate persistence. Prisma migrations define the database contract.
 
-## Applications
+The root `vercel.json` routes `/api/*` to Express and all remaining paths to Vite. This same-origin arrangement avoids a separate public API origin in production.
 
-- `backend/`: TypeScript, Express, Prisma, PostgreSQL, Zod, JWT.
-- `frontend/`: React, TypeScript, Vite, MUI, TanStack Query.
-- `postman/`: API collection and local environment.
+## Key inventory invariant
+
+Stock is changed only through controlled service operations. Confirming a challan locks the relevant product records, verifies every requested quantity, decrements stock, records the resulting balance, and confirms the document atomically. If any line fails, the complete transaction rolls back.
+
+Confirmed challans are not edited. Cancelling one records compensating `IN` movements, which preserves the audit history instead of rewriting it.
+
+## Demo accounts
+
+The isolated case-study seed creates the following users:
+
+| Role | Email | Case-study password |
+|---|---|---|
+| Admin | `admin@tradeflow.local` | `TradeFlow@123` |
+| Sales | `sales@tradeflow.local` | `TradeFlow@123` |
+| Warehouse | `warehouse@tradeflow.local` | `TradeFlow@123` |
+| Accounts | `accounts@tradeflow.local` | `TradeFlow@123` |
+
+These credentials are only for the demo environment and must not be reused for a real system. A deployment can override the seed password with `SEED_PASSWORD`.
+
+## Role matrix
+
+| Capability | Admin | Sales | Warehouse | Accounts |
+|---|:---:|:---:|:---:|:---:|
+| View dashboard and operational records | Yes | Yes | Yes | Yes |
+| Create/update customers and follow-ups | Yes | Yes | No | No |
+| Create/update products and adjust stock | Yes | No | Yes | No |
+| Create/update/confirm/cancel challans | Yes | Yes | No | No |
+| View products, stock ledger, and challans | Yes | Yes | Yes | Yes |
+
+Authorization is enforced server-side; hiding an action in the frontend is not treated as a security boundary.
+
+## Technology
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Material UI, TanStack Query, React Hook Form, Zod |
+| Backend | Node.js 20+, Express 5, TypeScript, Zod, JWT, bcrypt |
+| Data | PostgreSQL, Prisma ORM |
+| Hosting | Vercel Services, Neon PostgreSQL |
+| Quality | Vitest, Supertest, TypeScript checks, GitHub Actions |
 
 ## Local setup
 
@@ -30,50 +95,88 @@ The service layer owns status transitions and transaction boundaries. Confirming
 - npm 10 or newer.
 - PostgreSQL 15 or newer, or Docker Desktop.
 
+This repository uses npm and committed lockfiles for both applications.
+
 ### 1. Start PostgreSQL
 
 ```bash
 docker compose up -d db
 ```
 
-### 2. Configure and run the backend
+### 2. Start the backend
 
-```bash
-cd backend
-copy .env.example .env
+Windows PowerShell:
+
+```powershell
+Set-Location backend
+Copy-Item .env.example .env
 npm ci
+npm run db:generate
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-On macOS/Linux, use `cp .env.example .env`.
-
-### 3. Configure and run the frontend
+macOS/Linux:
 
 ```bash
-cd frontend
-copy .env.example .env
+cd backend
+cp .env.example .env
+npm ci
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+### 3. Start the frontend
+
+Windows PowerShell:
+
+```powershell
+Set-Location frontend
+Copy-Item .env.example .env
 npm ci
 npm run dev
 ```
 
-Open `http://localhost:5173`. The API runs at `http://localhost:4000/api`.
+macOS/Linux:
 
-## Demo users
+```bash
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev
+```
 
-The seed creates one account per required role. Their default password is `TradeFlow@123` unless `SEED_PASSWORD` is set.
+Open `http://localhost:5173`. The local API is `http://localhost:4000/api`.
 
-| Role | Email |
-|---|---|
-| Admin | `admin@tradeflow.local` |
-| Sales | `sales@tradeflow.local` |
-| Warehouse | `warehouse@tradeflow.local` |
-| Accounts | `accounts@tradeflow.local` |
+## Environment variables
 
-These credentials are for the case-study environment only.
+### Backend
+
+| Variable | Required | Purpose |
+|---|:---:|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `JWT_SECRET` | Yes | JWT signing secret; use at least 32 random characters |
+| `JWT_EXPIRES_IN` | No | Access-token lifetime; defaults are defined by the application |
+| `CORS_ORIGIN` | Yes | Allowed browser origin |
+| `PORT` | No | Local server port |
+| `NODE_ENV` | No | Runtime environment |
+| `LOG_LEVEL` | No | Application logging level |
+| `SEED_PASSWORD` | No | Overrides the demo seed password |
+
+### Frontend
+
+| Variable | Required | Purpose |
+|---|:---:|---|
+| `VITE_API_BASE_URL` | Local/standalone only | API base URL; omitted for same-origin Vercel deployment |
+
+Never commit `.env` files, database URLs, JWT secrets, or provider tokens.
 
 ## Commands
+
+Run commands from the relevant package directory.
 
 Backend:
 
@@ -82,7 +185,9 @@ npm run dev
 npm run build
 npm run lint
 npm run test
+npm run db:generate
 npm run db:migrate
+npm run db:deploy
 npm run db:seed
 ```
 
@@ -93,49 +198,70 @@ npm run dev
 npm run build
 npm run lint
 npm run test
+npm run preview
 ```
 
-## Environment variables
+## API overview
 
-Backend: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CORS_ORIGIN`, `PORT`, `NODE_ENV`, `LOG_LEVEL`, and optional `SEED_PASSWORD`.
+All protected endpoints require `Authorization: Bearer <token>`.
 
-Frontend: `VITE_API_BASE_URL`.
+| Area | Methods and endpoints |
+|---|---|
+| Authentication | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` |
+| Dashboard | `GET /api/dashboard/summary` |
+| Customers | `GET/POST /api/customers`, `GET/PATCH /api/customers/:id`, `POST /api/customers/:id/follow-ups` |
+| Inventory | `GET /api/warehouses`, `GET/POST /api/products`, `GET/PATCH /api/products/:id`, `POST /api/products/:id/stock-adjustments` |
+| Stock ledger | `GET /api/stock-movements` |
+| Challans | `GET/POST /api/challans`, `GET/PATCH /api/challans/:id`, `POST /api/challans/:id/confirm`, `POST /api/challans/:id/cancel` |
 
-Never commit real environment values. Templates are provided in each application.
+The Postman collection is available at [`postman/TradeFlow-Ops.postman_collection.json`](./postman/TradeFlow-Ops.postman_collection.json).
 
-## Roles
+## Verification
 
-- Admin: complete access.
-- Sales: customer/follow-up management, product and movement visibility, challan creation and confirmation.
-- Warehouse: product and stock management, customer and challan visibility.
-- Accounts: read-only access to customers, products, movements, and challans.
+GitHub Actions runs on pushes to `main` and pull requests. It installs from both lockfiles, provisions PostgreSQL for the backend, applies migrations and seed data, then runs:
 
-The API enforces roles even when the frontend hides an action.
+- Backend TypeScript checks, unit/integration tests, and production build.
+- Frontend TypeScript checks, tests, and production build.
 
-## Deployment
+The deployed health, login, and authenticated stock-movement endpoints were smoke-tested after the Vercel deployment.
 
-The recommended deployment is **Neon -> Vercel Services**:
+## Repository structure
 
-1. Provision PostgreSQL on Neon.
-2. Import the repository into Vercel with the **Services** preset and root directory `./`.
-3. Add the backend secrets to Vercel, then deploy the Vite and Express services together.
-4. Update the Postman production environment and run the smoke-test flow.
-
-The root `vercel.json` routes `/api/*` to Express and all other paths to Vite on one origin. The frontend therefore uses `/api` in production without a public cross-origin API variable. `render.yaml` remains available as a fallback if Vercel Services is unavailable for an account.
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for exact provider settings, environment variables, migration and seed behavior, verification steps, and the final submission checklist.
-
-### Live endpoints
-
-- Frontend: _add the Vercel production URL after deployment_
-- Backend API: _add the same Vercel URL plus `/api` after deployment_
-- Health check: _add the same Vercel URL plus `/api/health` after deployment_
+```text
+tradeflow-ops/
+|-- backend/              Express, services, Prisma, migrations, tests
+|-- frontend/             React application and frontend tests
+|-- postman/              API collection and environment template
+|-- .github/workflows/    Continuous integration
+|-- vercel.json           Multi-service production routing
+|-- render.yaml           Optional backend fallback
+|-- DEPLOYMENT.md         Deployment and operations runbook
+|-- PRODUCT.md            Product scope and acceptance criteria
+|-- DESIGN.md             Interface principles and design system
+`-- SUBMISSION.md         Required case-study links and final checklist
+```
 
 ## Assumptions and known limitations
 
-- Stock uses whole units and products have one current warehouse.
-- GST numbers are stored but not verified externally.
+- Stock is represented in whole units and each product belongs to one current warehouse.
+- GST numbers are stored but are not verified against an external service.
 - Confirmed challans are immutable; cancellation restores stock through compensating movements.
-- Products are archived instead of physically deleted once referenced.
-- Purchase orders, invoicing, returns, warehouse transfers, refresh tokens, and multi-tenancy are outside this case-study scope.
-- JWT is stored in `sessionStorage` for the demo. A production deployment should use short-lived access tokens with rotated HTTP-only refresh cookies.
+- Products referenced by operations are archived rather than physically deleted.
+- Purchase orders, invoices, returns, warehouse transfers, refresh-token rotation, multi-tenancy, and external notifications are outside this case-study scope.
+- The demo stores its short-lived JWT in `sessionStorage`. A production-grade public system should add rotated HTTP-only refresh cookies and stronger session revocation.
+- Vercel serverless execution is appropriate for the case study; long-running jobs would require a worker/queue architecture.
+
+## Documentation
+
+- [Deployment and operations](./DEPLOYMENT.md)
+- [Product scope](./PRODUCT.md)
+- [Design system](./DESIGN.md)
+- [Submission checklist](./SUBMISSION.md)
+
+## Submission
+
+The assessment requests four links: résumé, GitHub repository, documentation, and recording. Use this README as the documentation link:
+
+`https://github.com/manoj0617/tradeflow-ops/blob/main/README.md`
+
+See [SUBMISSION.md](./SUBMISSION.md) before submitting.
