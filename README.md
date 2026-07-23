@@ -114,12 +114,21 @@ The API enforces roles even when the frontend hides an action.
 
 ## Deployment
 
-1. Provision PostgreSQL on Neon, Supabase, or another provider.
-2. Deploy `backend/` to Render or Railway and set backend environment variables.
-3. Run `npm run db:deploy` followed by `npm run db:seed` once.
-4. Deploy `frontend/` to Vercel or Netlify with `VITE_API_BASE_URL` pointing to the backend `/api` URL.
-5. Set `CORS_ORIGIN` to the exact frontend origin.
-6. Verify `/api/health`, then run the Postman collection against production.
+The recommended free deployment order is **Neon -> Render -> Vercel**:
+
+1. Provision PostgreSQL on Neon.
+2. Deploy the API to Render using the root `render.yaml` blueprint.
+3. Deploy `frontend/` to Vercel and set `VITE_API_BASE_URL` to the Render URL plus `/api`.
+4. Update Render's `CORS_ORIGIN` to the exact Vercel production origin.
+5. Update the Postman production environment and run the smoke-test flow.
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for exact provider settings, environment variables, migration and seed behavior, verification steps, and the final submission checklist.
+
+### Live endpoints
+
+- Frontend: _add the Vercel production URL after deployment_
+- Backend API: _add the Render service URL plus `/api` after deployment_
+- Health check: _add the Render service URL plus `/api/health` after deployment_
 
 ## Assumptions and known limitations
 
@@ -129,4 +138,3 @@ The API enforces roles even when the frontend hides an action.
 - Products are archived instead of physically deleted once referenced.
 - Purchase orders, invoicing, returns, warehouse transfers, refresh tokens, and multi-tenancy are outside this case-study scope.
 - JWT is stored in `sessionStorage` for the demo. A production deployment should use short-lived access tokens with rotated HTTP-only refresh cookies.
-
