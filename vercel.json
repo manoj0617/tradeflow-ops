@@ -4,14 +4,14 @@
     "frontend": {
       "root": "frontend",
       "framework": "vite",
-      "installCommand": "npm ci --no-audit --no-fund",
+      "installCommand": "npm ci --include=dev --no-audit --no-fund",
       "buildCommand": "npm run build",
       "outputDirectory": "dist"
     },
     "backend": {
       "root": "backend",
       "framework": "express",
-      "installCommand": "npm ci --no-audit --no-fund",
+      "installCommand": "npm ci --include=dev --no-audit --no-fund",
       "buildCommand": "npm run db:generate && npm run build && npm run db:deploy && npm run db:seed"
     }
   },
