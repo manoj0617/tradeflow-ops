@@ -38,7 +38,12 @@ export function ChallansPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const debouncedSearch = useDebouncedValue(search);
-  const params = { page, limit, search: debouncedSearch, status };
+  const params = {
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    status: status || undefined,
+  };
   const challans = useQuery({
     queryKey: CHALLAN_KEYS.list(params),
     queryFn: async () => (await api.get<ApiList<Challan>>('/challans', { params })).data,
@@ -144,4 +149,3 @@ export function ChallansPage() {
     </>
   );
 }
-

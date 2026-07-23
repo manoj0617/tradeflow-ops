@@ -1,6 +1,6 @@
 import { ChallanStatus } from '@prisma/client';
 import { z } from 'zod';
-import { listQuerySchema } from '../../common/pagination.js';
+import { listQuerySchema, optionalQueryParam } from '../../common/pagination.js';
 
 const lineItemSchema = z.object({
   productId: z.string().uuid(),
@@ -28,8 +28,7 @@ export const cancelChallanRequestSchema = z.object({
 });
 export const challanListRequestSchema = z.object({
   query: listQuerySchema.extend({
-    status: z.nativeEnum(ChallanStatus).optional(),
-    customerId: z.string().uuid().optional(),
+    status: optionalQueryParam(z.nativeEnum(ChallanStatus)),
+    customerId: optionalQueryParam(z.string().uuid()),
   }),
 });
-

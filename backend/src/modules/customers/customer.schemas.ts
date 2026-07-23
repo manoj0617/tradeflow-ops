@@ -1,6 +1,6 @@
 import { CustomerStatus, CustomerType } from '@prisma/client';
 import { z } from 'zod';
-import { listQuerySchema } from '../../common/pagination.js';
+import { listQuerySchema, optionalQueryParam } from '../../common/pagination.js';
 
 const customerFields = z.object({
   name: z.string().trim().min(2).max(100),
@@ -26,8 +26,8 @@ export const updateCustomerRequestSchema = z.object({
 export const customerIdRequestSchema = z.object({ params: z.object({ id: z.string().uuid() }) });
 export const customerListRequestSchema = z.object({
   query: listQuerySchema.extend({
-    status: z.nativeEnum(CustomerStatus).optional(),
-    type: z.nativeEnum(CustomerType).optional(),
+    status: optionalQueryParam(z.nativeEnum(CustomerStatus)),
+    type: optionalQueryParam(z.nativeEnum(CustomerType)),
   }),
 });
 export const followUpRequestSchema = z.object({
@@ -37,4 +37,3 @@ export const followUpRequestSchema = z.object({
     followUpDate: z.union([z.coerce.date(), z.literal('')]).optional().transform((value) => value || undefined),
   }),
 });
-

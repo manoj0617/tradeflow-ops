@@ -1,6 +1,6 @@
 import { StockMovementType } from '@prisma/client';
 import { z } from 'zod';
-import { listQuerySchema } from '../../common/pagination.js';
+import { listQuerySchema, optionalQueryParam } from '../../common/pagination.js';
 
 const productFields = z.object({
   name: z.string().trim().min(2).max(140),
@@ -21,15 +21,15 @@ export const updateProductRequestSchema = z.object({
 export const productIdRequestSchema = z.object({ params: z.object({ id: z.string().uuid() }) });
 export const productListRequestSchema = z.object({
   query: listQuerySchema.extend({
-    category: z.string().trim().max(80).optional(),
-    warehouseId: z.string().uuid().optional(),
-    lowStock: z.enum(['true', 'false']).optional(),
+    category: optionalQueryParam(z.string().trim().max(80)),
+    warehouseId: optionalQueryParam(z.string().uuid()),
+    lowStock: optionalQueryParam(z.enum(['true', 'false'])),
   }),
 });
 export const movementListRequestSchema = z.object({
   query: listQuerySchema.extend({
-    productId: z.string().uuid().optional(),
-    type: z.nativeEnum(StockMovementType).optional(),
+    productId: optionalQueryParam(z.string().uuid()),
+    type: optionalQueryParam(z.nativeEnum(StockMovementType)),
   }),
 });
 export const stockAdjustmentRequestSchema = z.object({
@@ -40,4 +40,3 @@ export const stockAdjustmentRequestSchema = z.object({
     reason: z.string().trim().min(3).max(300),
   }),
 });
-

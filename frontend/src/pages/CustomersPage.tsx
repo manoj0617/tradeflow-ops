@@ -45,7 +45,13 @@ export function CustomersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<Customer | null>(null);
   const debouncedSearch = useDebouncedValue(search);
-  const params = { page, limit, search: debouncedSearch, status, type };
+  const params = {
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    status: status || undefined,
+    type: type || undefined,
+  };
 
   const customers = useQuery({
     queryKey: CUSTOMER_KEYS.list(params),
@@ -197,4 +203,3 @@ export function CustomersPage() {
     </>
   );
 }
-

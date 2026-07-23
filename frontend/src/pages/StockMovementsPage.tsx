@@ -30,7 +30,12 @@ export function StockMovementsPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const debouncedSearch = useDebouncedValue(search);
-  const params = { page, limit, search: debouncedSearch, type };
+  const params = {
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    type: type || undefined,
+  };
   const movements = useQuery({
     queryKey: INVENTORY_KEYS.movementList(params),
     queryFn: async () => (await api.get<ApiList<StockMovement>>('/stock-movements', { params })).data,
@@ -115,4 +120,3 @@ export function StockMovementsPage() {
     </>
   );
 }
-
