@@ -51,8 +51,13 @@ const confirmWithinTransaction = async (transaction: Transaction, id: string, us
 
   await lockProducts(transaction, challan.items.map((item) => item.productId));
 
+  const products = await transaction.product.findMany({
+    where: { id: { in: challan.items.map((item) => item.productId) } },
+  });
+  const productsById = new Map(products.map((product) => [product.id, product]));
+
   for (const item of challan.items) {
-    const product = await transaction.product.findUnique({ where: { id: item.productId } });
+    const product = productsById.get(item.productId);
     if (!product?.isActive) throw AppError.conflict('PRODUCT_UNAVAILABLE', `${item.snapshotProductName} is unavailable`);
     if (product.currentStock < item.quantity) {
       throw AppError.conflict(
@@ -61,30 +66,40 @@ const confirmWithinTransaction = async (transaction: Transaction, id: string, us
         { productId: product.id, sku: product.sku, available: product.currentStock, requested: item.quantity },
       );
     }
-
-    const update = await transaction.product.updateMany({
-      where: { id: product.id, currentStock: { gte: item.quantity } },
-      data: { currentStock: { decrement: item.quantity }, updatedById: userId },
-    });
-    if (update.count !== 1) {
-      throw AppError.conflict('INSUFFICIENT_STOCK', `Stock changed while confirming ${item.snapshotProductName}. Try again.`);
-    }
-    const updated = await transaction.product.findUniqueOrThrow({ where: { id: product.id } });
-    await transaction.stockMovement.create({
-      data: {
-        productId: product.id,
-        type: StockMovementType.OUT,
-        quantity: item.quantity,
-        reason: `Confirmed sales challan ${challan.challanNumber}`,
-        balanceAfter: updated.currentStock,
-        referenceType: 'SALES_CHALLAN',
-        referenceId: challan.id,
-        referenceNumber: challan.challanNumber,
-        challanId: challan.id,
-        createdById: userId,
-      },
-    });
   }
+
+  const adjustments = challan.items.map((item) => Prisma.sql`(${item.productId}::uuid, ${item.quantity}::integer)`);
+  const updatedProducts = await transaction.$queryRaw<Array<{ id: string; currentStock: number }>>(Prisma.sql`
+    UPDATE "Product" AS product
+    SET
+      "currentStock" = product."currentStock" - adjustment.quantity,
+      "updatedById" = ${userId}::uuid,
+      "updatedAt" = NOW()
+    FROM (VALUES ${Prisma.join(adjustments)}) AS adjustment(id, quantity)
+    WHERE product.id = adjustment.id
+      AND product."currentStock" >= adjustment.quantity
+    RETURNING product.id, product."currentStock" AS "currentStock"
+  `);
+
+  if (updatedProducts.length !== challan.items.length) {
+    throw AppError.conflict('INSUFFICIENT_STOCK', 'Stock changed while confirming this challan. Try again.');
+  }
+
+  const balancesByProductId = new Map(updatedProducts.map((product) => [product.id, product.currentStock]));
+  await transaction.stockMovement.createMany({
+    data: challan.items.map((item) => ({
+      productId: item.productId,
+      type: StockMovementType.OUT,
+      quantity: item.quantity,
+      reason: `Confirmed sales challan ${challan.challanNumber}`,
+      balanceAfter: balancesByProductId.get(item.productId)!,
+      referenceType: 'SALES_CHALLAN',
+      referenceId: challan.id,
+      referenceNumber: challan.challanNumber,
+      challanId: challan.id,
+      createdById: userId,
+    })),
+  });
 
   return transaction.salesChallan.update({
     where: { id },
